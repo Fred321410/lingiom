@@ -6,6 +6,9 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -17,35 +20,41 @@ import java.util.Map;
 @Repository
 public class GreetingDaoImpl implements GreetingDao {
 
-    NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-
     @Autowired
-    public void setNamedParameterJdbcTemplate(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
-    }
+    private DataSource dataSource;
+
 
     @Override
     public Greeting getById(int id){
-        Map<String, Object> params = new HashMap<>();
-        params.put("id", id);
 
-        String sql = "SELECT * FROM greetings WHERE id=:id";
+        String sql = "SELECT * FROM greetings WHERE id = ?";
 
-        Greeting result = namedParameterJdbcTemplate.queryForObject(
-                sql,
-                params,
-                new GreetingMapper());
+        Connection conn = null;
+        try {
+            conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, 1);
+            Greeting g = null;
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                g = new Greeting(
+                        rs.getInt("id"),
+                        rs.getString("content")
+                );
+            }
+            rs.close();
+            ps.close();
+            return g;
 
-        return result;
-    }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
 
-    private static final class GreetingMapper implements RowMapper<Greeting> {
-
-        public Greeting mapRow(ResultSet rs, int rowNum) throws SQLException {
-            Greeting greeting = new Greeting();
-            greeting.setId(rs.getInt("id"));
-            greeting.setContent(rs.getString("content"));
-            return greeting;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {}
+            }
         }
     }
 }

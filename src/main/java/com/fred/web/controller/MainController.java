@@ -27,7 +27,7 @@ public class MainController {
         /*Greeting g = new Greeting();
         g.setId(counter.incrementAndGet());
         g.setContent(String.format(template, name));*/
-        Greeting g = greetingDao.getById(0);
+        Greeting g = greetingDao.getById(1);
         System.out.println(g.getContent());
         return g;
     }
